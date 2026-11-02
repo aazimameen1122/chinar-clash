@@ -61,6 +61,16 @@
   #timer { font-family:"Arial Black",sans-serif; font-size:clamp(24px,5vw,40px); background:rgba(0,0,0,.55); border:2px solid rgba(255,255,255,.6); border-radius:12px; padding:2px 14px; }
   .combo { position:absolute; top:34%; font-family:"Arial Black",sans-serif; font-size:clamp(20px,4.5vw,34px); color:#ffe95e; text-shadow:0 3px 0 #7a2a1e; }
   .combo.left { left:6%; } .combo.right { right:6%; }
+  #newsdesk { position:absolute; left:50%; transform:translateX(-50%); bottom:12px; width:min(680px,92vw); background:rgba(10,4,2,.72); border:1px solid rgba(255,255,255,.35); border-radius:10px; overflow:hidden; }
+  #newsdesk .deskrow { display:flex; align-items:center; gap:8px; padding:5px 10px 0; }
+  #newsdesk .live { background:#d7263d; color:#fff; font-size:10px; font-weight:bold; padding:2px 7px; border-radius:5px; letter-spacing:1px; animation:blink 1s steps(2) infinite; }
+  #newsdesk .chan { font-size:11px; letter-spacing:1px; color:#ffe9c9; }
+  #newsdesk .tickerrow { display:flex; align-items:center; gap:8px; padding:4px 10px 7px; }
+  #newsdesk .btag { background:#ffb347; color:#231106; font-size:10px; font-weight:bold; padding:2px 6px; border-radius:4px; white-space:nowrap; }
+  #ticker-text { font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #move-banner { position:fixed; left:0; right:0; top:38%; z-index:17; text-align:center; pointer-events:none; font-family:"Arial Black",sans-serif; font-size:clamp(17px,4.4vw,34px); color:#ffe95e; text-shadow:0 3px 0 #7a2a1e, 0 8px 22px rgba(0,0,0,.6); }
+  .confetti { position:absolute; top:-20px; width:9px; height:14px; z-index:30; pointer-events:none; animation-name:cfall; animation-timing-function:linear; animation-fill-mode:forwards; }
+  @keyframes cfall { to { transform:translateY(108vh) rotate(680deg); } }
   #announce { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:18; pointer-events:none; font-family:"Arial Black",sans-serif; font-size:clamp(30px,8vw,72px); color:#ffe95e; text-shadow:0 5px 0 #7a2a1e, 0 14px 34px rgba(0,0,0,.7); letter-spacing:2px; text-align:center; padding:0 10px; }
   #super-banner { position:fixed; left:0; right:0; top:22%; z-index:17; text-align:center; pointer-events:none; font-family:"Arial Black",sans-serif; font-size:clamp(20px,5.5vw,44px); color:#fff; background:linear-gradient(90deg,transparent,rgba(0,0,0,.65),transparent); padding:10px 4px; }
   /* pause + result */
@@ -112,7 +122,12 @@
   </div>
   <div class="combo left" id="combo-l"></div>
   <div class="combo right" id="combo-r"></div>
+  <div id="newsdesk">
+    <div class="deskrow"><span class="live">● LIVE</span><span class="chan">CHINAR NEWS · KURSI DESK</span></div>
+    <div class="tickerrow"><span class="btag">BREAKING</span><span id="ticker-text">Kursi ke liye jung jaari…</span></div>
+  </div>
 </div>
+<div id="move-banner" class="hidden"></div>
 <div id="announce" class="hidden"></div>
 <div id="super-banner" class="hidden"></div>
 

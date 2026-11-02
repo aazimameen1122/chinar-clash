@@ -52,6 +52,18 @@ const FIGHTERS = [
     intro:'Kashmir ki shaan abhi zinda hai!', win:'Sher hamesha sher hota hai!', excuse:'Legends do not give excuses.' },
 ];
 const byId = id => FIGHTERS.find(f => f.id === id);
+/* named combo finishers + victory dances (feature pattern from the REA blueprint, our own names) */
+const FINISHERS = { omar:'SKI SE KURSI COMBO!', mehbooba:'KALAM TOD COMBO!', farooq:'PAANCH SAAL COMBO!', sajad:'LION MAUL COMBO!', altaf:'TYCOON TAKEOVER COMBO!', azad:'AZAADI EXPRESS COMBO!', rashid:'BINA BREAK COMBO!', sher:'SHER KA PANJA COMBO!' };
+const DANCES = { omar:'GULMARG SHIMMY!', mehbooba:'JHELUM JIVE!', farooq:'DADA DISCO!', sajad:'HANDWARA HOP!', altaf:'DEAL DANCE!', azad:'BUCKET BOOGIE!', rashid:'AWAAZ WAVE!', sher:'CHINAR SHAKE!' };
+const HEADLINES = [
+  'Kursi ke liye do neta aamne-saamne, chai thandi ho gayi',
+  'Exit polls phir galat, ladai asli result degi',
+  'Manifesto sirf kagaz hai, mukka asli hai — ground report',
+  'Shikara wala beech mai phasa, dono taraf se naare',
+  'Ghanta Ghar ki ghanti baji, round ka faisla nazdeek',
+  'Pheran ke andar chhupa tha game plan, sources ka dawa',
+  'Jeetne wale ko kursi, haarne wale ko press conference',
+];
 const STAGES = [
   { id:'dal', name:'DAL LAKE' },
   { id:'lalchowk', name:'LAL CHOWK' },
@@ -262,7 +274,7 @@ function startMatch(){
   if(match){ P1.wins = match.w1; P2.wins = match.w2; }
   match = { round:(match ? match.round : 1), w1:P1.wins, w2:P2.wins, time:60, state:'intro', stateT:0, over:false };
   $('hname-l').textContent = P1.def.name; $('hname-r').textContent = P2.def.name;
-  show('fight'); announce(`ROUND ${match.round}`); sfx.select();
+  show('fight'); announce(`ROUND ${match.round}`); sfx.select(); startTicker();
   setTimeout(()=>{ if(match && match.state==='intro'){ match.state='fight'; announce('FIGHT!'); } }, 1150);
 }
 function endRound(winner, loser, byKO){
@@ -271,6 +283,7 @@ function endRound(winner, loser, byKO){
   winner.wins++; if(winner.isP1) match.w1++; else match.w2++;
   announce(byKO ? 'K.O.!' : 'TIME UP!');
   if(byKO) sfx.ko();
+  if(winner.wins >= 2) setTimeout(()=> announce(DANCES[winner.def.id]), 1250);
   setTimeout(()=>{
     if(winner.wins >= 2) return endMatch(winner, loser);
     match.round++; P1.wins = match.w1; P2.wins = match.w2;
@@ -278,8 +291,23 @@ function endRound(winner, loser, byKO){
     P1.wins = keep.w1; P2.wins = keep.w2; announce(`ROUND ${match.round}`);
   }, 2400);
 }
+let tickerTimer = null, tickerIdx = 0;
+function startTicker(){
+  stopTicker(); tickerIdx = Math.floor(Math.random() * HEADLINES.length);
+  const tick = () => { const el = $('ticker-text'); if(el) el.textContent = HEADLINES[tickerIdx++ % HEADLINES.length]; };
+  tick(); tickerTimer = setInterval(tick, 4500);
+}
+function stopTicker(){ if(tickerTimer){ clearInterval(tickerTimer); tickerTimer = null; } }
+function spawnConfetti(accent){
+  const r = $('result'); r.querySelectorAll('.confetti').forEach(x => x.remove());
+  const colors = [accent, '#ffd700', '#ffffff', '#ffb347'];
+  for(let i = 0; i < 36; i++){ const d = document.createElement('div'); d.className = 'confetti';
+    d.style.left = (2 + Math.random() * 96) + 'vw'; d.style.background = colors[i % colors.length];
+    d.style.animationDelay = (Math.random() * 0.9) + 's'; d.style.animationDuration = (2.2 + Math.random() * 1.6) + 's';
+    r.appendChild(d); }
+}
 function endMatch(winner, loser){
-  match.over = true;
+  match.over = true; stopTicker();
   const store = loadBoss();
   let sub = '';
   if(winner.isP1){ store.streak += 1; if(store.streak >= 3 && !store.unlocked){ store.unlocked = true; sub = '🏆 3-win streak — SHER-E-KASHMIR unlocked as BOSS!'; } else sub = `Win streak: ${store.streak}. Win ${Math.max(0, 3-store.streak)} more in a row to unlock the Boss.`; }
@@ -292,7 +320,7 @@ function endMatch(winner, loser){
   $('paper-stamp').textContent = winner.isP1 ? 'YOU WIN!' : 'YOU LOSE';
   $('paper-stamp').style.color = winner.isP1 ? '#1d7a35' : '#b3202a'; $('paper-stamp').style.borderColor = winner.isP1 ? '#1d7a35' : '#b3202a';
   $('result-sub').textContent = sub;
-  show('result');
+  show('result'); spawnConfetti(winner.def.accent);
 }
 const ATTACKS = {
   punch:   { dur:0.26, dmg:5,  range:1.25, kb:1.6, meter:6 },
@@ -308,6 +336,12 @@ function tryAttack(F, type){
   if(A.lunge) F.vx = F.facing * A.lunge;
   sfx.swing();
 }
+function F_isBasic(t){ return t === 'punch' || t === 'kick'; }
+function moveBanner(txt){ const b = $('move-banner'); b.textContent = txt; b.classList.remove('hidden'); clearTimeout(moveBanner._t); moveBanner._t = setTimeout(()=> b.classList.add('hidden'), 900); }
+function bonusHit(att, def, dmg, label){
+  def.hp = Math.max(0, def.hp - dmg); def.hitT = Math.max(def.hitT, 0.3); hitstop = 0.11; shake = 0.26;
+  moveBanner(label); blip(200, 40, 0.25, 'sawtooth', 0.16); noiseHit(0.3);
+}
 function landHit(att, def, A){
   const blocked = def.blocking && def.grounded && !A.unblockable;
   const dmg = blocked ? Math.ceil(A.dmg * 0.12) : Math.round(A.dmg * att.def.dmg);
@@ -320,6 +354,14 @@ function landHit(att, def, A){
   att.combo++; att.comboT = 1.1; def.combo = 0;
   hitstop = blocked ? 0.03 : 0.065; shake = blocked ? 0.06 : 0.14;
   blocked ? sfx.block() : sfx.hit();
+  /* combo sequences: punch/kick chains trigger named finishers (REA blueprint) */
+  if(!blocked && (F_isBasic(att.atk?.type))){
+    att.seq = att.seq || []; att.seq.push(att.atk.type === 'punch' ? 'p' : 'k'); att.seqT = 1.1;
+    if(att.seq.length > 3) att.seq = att.seq.slice(-3);
+    const s = att.seq.join(',');
+    if(s === 'p,p,p' || s === 'p,p,k' || s === 'p,k,k'){ att.seq = []; bonusHit(att, def, 4, FINISHERS[att.def.id]); }
+    else if(s.endsWith('k,k') && att.seq.length >= 2){ att.seq = []; bonusHit(att, def, 2, att.def.special2); }
+  } else if(!blocked){ att.seq = []; }
   if(def.hp <= 0 && match.state === 'fight') endRound(att, def, true);
 }
 function doSuper(F, foe){
@@ -395,6 +437,7 @@ function stepFighter(F, foe, dt){
   if(F.ko){ F.koT += dt; pose(F, dt, performance.now()/1000); return; }
   F.hitT = Math.max(0, F.hitT - dt);
   F.comboT -= dt; if(F.comboT <= 0) F.combo = 0;
+  if(F.seqT !== undefined){ F.seqT -= dt; if(F.seqT <= 0) F.seq = []; }
   if(F.atk){
     F.atk.t += dt;
     const A = ATTACKS[F.atk.type];
@@ -507,9 +550,9 @@ function plate(which, f){
 $('start-btn').onclick = () => { audio(); openSelect(); };
 $('fight-btn').onclick = () => { audio(); match = null; startMatch(); };
 $('resume-btn').onclick = () => show('fight');
-$('quit-btn').onclick = () => { clearFighters(); match = null; buildSelect(); show('select'); };
+$('quit-btn').onclick = () => { stopTicker(); clearFighters(); match = null; buildSelect(); show('select'); };
 $('rematch-btn').onclick = () => { match = null; startMatch(); };
-$('select-btn').onclick = () => { clearFighters(); match = null; buildSelect(); show('select'); };
+$('select-btn').onclick = () => { stopTicker(); clearFighters(); match = null; buildSelect(); show('select'); };
 $('legal-ok').onclick = () => { try { localStorage.setItem('chinar-clash:legal-v1','1'); } catch(e){} $('legal').classList.add('hidden'); };
 addEventListener('pointerdown', ()=>{ if(AC && AC.state==='suspended') AC.resume(); }, { passive:true });
 
