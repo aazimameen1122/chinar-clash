@@ -357,7 +357,8 @@ const ATTACKS = {
   grab:    { dur:0.44, dmg:8,  range:1.05, kb:4.2, meter:9, unblockable:true },
 };
 function tryAttack(F, type){
-  if(F.atk || F.ko || match.state !== 'fight') return;
+  if(F.ko || match.state !== 'fight') return;
+  if(F.atk || F.hitT > 0){ if(F === P1) F.buf = { type, t: 0.12 }; return; } // DeepSeek #2: 120ms input buffer — a press during recovery/stun is remembered, not dropped
   const A = ATTACKS[type]; F.atk = { type, t:0, dur:A.dur, hitDone:false };
   if(A.lunge) F.vx = F.facing * A.lunge;
   sfx.swing();
@@ -369,13 +370,14 @@ function bonusHit(att, def, dmg, label){
   moveBanner(label); blip(200, 40, 0.25, 'sawtooth', 0.16); noiseHit(0.3);
 }
 function landHit(att, def, A){
-  const blocked = def.blocking && def.grounded && !A.unblockable;
+  const blocked = def.blocking && def.grounded && !A.unblockable && !def.atk && def.hitT <= 0; // DeepSeek #1: no guarding out of stun or mid-swing
   const dmg = blocked ? Math.ceil(A.dmg * 0.12) : Math.round(A.dmg * att.def.dmg);
   def.hp = Math.max(0, def.hp - dmg);
   def.hitT = blocked ? 0.08 : 0.22;
+  if(!blocked) def.atk = null; // DeepSeek #1: a clean hit interrupts the defender's own attack (counter-hit)
   def.vx = att.facing * A.kb * (blocked ? 0.3 : 1);
   if(!def.grounded || A.type==='grab') { /* keep momentum */ }
-  att.meter = Math.min(100, att.meter + A.meter);
+  att.meter = Math.min(100, att.meter + (blocked ? A.meter * 0.5 : A.meter)); // DeepSeek #1: blocked hits build less attacker meter
   def.meter = Math.min(100, def.meter + A.meter * 0.7);
   att.combo++; att.comboT = 1.1; def.combo = 0;
   hitstop = blocked ? 0.03 : 0.065; shake = blocked ? 0.06 : 0.14;
@@ -401,6 +403,11 @@ function doSuper(F, foe){
   F.superFx = { g, orb, vx: F.facing * 13, foe, t:0 };
   F.atk = { type:'super', t:0, dur:0.5, hitDone:true };
 }
+
+/* DeepSeek #6: if the app/tab loses focus (notification, app switch), flush all input so nothing stays latched */
+function flushInput(){ for(const k in keys) keys[k] = false; touchState.left = touchState.right = touchState.crouch = touchState.jump = touchState.punch = touchState.kick = touchState.super = touchState.grab = false; stickEnd(); }
+addEventListener('blur', flushInput);
+document.addEventListener('visibilitychange', () => { if(document.hidden) flushInput(); });
 
 /* ============ input + CPU ============ */
 function playerControl(F, foe, dt){
@@ -435,11 +442,17 @@ function cpuControl(F, foe, dt){
   F.cpuT -= dt * 1000;
   const dist = Math.abs(foe.x - F.x), dirTo = Math.sign(foe.x - F.x);
   F.blocking = false;
-  if(foe.atk && dist < 1.9 && Math.random() < D.block){ F.blocking = true; F.vx = 0; }
+  /* DeepSeek #3: one latched guard decision per incoming attack, behind a human-ish reaction delay (was: per-frame random flicker) */
+  const threat = foe.atk && dist < 1.9;
+  if(!threat){ F.guardRoll = null; F.guardT = 0; }
+  else if(F.guardRoll == null){ F.guardRoll = Math.random() < D.block; F.guardT = (D.react / 1000) * (0.35 + Math.random() * 0.5); }
+  else if(F.guardRoll){ F.guardT -= dt; if(F.guardT <= 0){ F.blocking = true; F.vx = 0; } }
   if(F.cpuT <= 0){
     F.cpuT = D.react * (0.7 + Math.random()*0.6);
     const r = Math.random();
     if(F.meter >= 100 && dist < 6) F.cpuPlan = 'super';
+    else if(foe.atk && foe.atk.hitDone && dist < 2.3 && Math.random() < 0.8) F.cpuPlan = 'punish'; // DeepSeek #4: punish whiffs
+    else if(!foe.grounded && dist < 2.4) F.cpuPlan = 'antiair'; // DeepSeek #4: anti-air jump-ins
     else if(dist > 1.5) F.cpuPlan = r < 0.85 ? 'approach' : 'jumpin';
     else F.cpuPlan = r < D.agg ? (r < D.agg*0.45 ? 'punch' : (r < D.agg*0.75 ? 'kick' : 'special')) : (r < D.agg + 0.25 ? 'retreat' : 'block');
   }
@@ -453,6 +466,8 @@ function cpuControl(F, foe, dt){
     case 'punch': tryAttack(F, Math.random()<0.3 ? 'special1' : 'punch'); F.cpuPlan='wait'; F.vx=0; break;
     case 'kick': tryAttack(F, Math.random()<0.3 ? 'special2' : (Math.random()<0.25 ? 'sweep' : 'kick')); F.cpuPlan='wait'; F.vx=0; break;
     case 'special': tryAttack(F, Math.random()<0.5 ? 'special1' : 'special2'); F.cpuPlan='wait'; F.vx=0; break;
+    case 'punish': F.vx = dirTo * F.def.walk * 1.2; if(dist < 1.6){ tryAttack(F, Math.random()<0.6 ? 'kick' : 'sweep'); F.cpuPlan='wait'; } break;
+    case 'antiair': tryAttack(F, Math.random()<0.5 ? 'special1' : 'kick'); F.cpuPlan='wait'; F.vx=0; break;
     case 'super': doSuper(F, foe); F.cpuPlan='wait'; break;
     default: F.vx = 0;
   }
@@ -462,7 +477,10 @@ function cpuControl(F, foe, dt){
 /* ============ physics + update ============ */
 function stepFighter(F, foe, dt){
   if(F.ko){ F.koT += dt; pose(F, dt, performance.now()/1000); return; }
+  if(hitstop > 0){ pose(F, dt, performance.now()/1000); return; } // DeepSeek #5: hitstop freezes BOTH fighters together
   F.hitT = Math.max(0, F.hitT - dt);
+  if(F.hitT > 0) F.blocking = false; // DeepSeek #1: cannot guard out of stun
+  if(F.buf){ F.buf.t -= dt; if(F.buf.t <= 0) F.buf = null; else if(!F.atk && F.hitT <= 0){ const b = F.buf.type; F.buf = null; tryAttack(F, b); } } // DeepSeek #2: fire the buffered press
   F.comboT -= dt; if(F.comboT <= 0) F.combo = 0;
   if(F.seqT !== undefined){ F.seqT -= dt; if(F.seqT <= 0) F.seq = []; }
   if(F.atk){
