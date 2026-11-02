@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Chinar Clash — Kashmiri Kursi Fighter</title>
+<link rel="manifest" href="manifest.webmanifest" />
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#160b06; font-family:"Trebuchet MS",Verdana,sans-serif; color:#fff; }
+  #game { position:fixed; inset:0; width:100%; height:100%; display:block; }
+  .hidden { display:none !important; }
+  .screen { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:20; text-align:center; padding:16px; }
+  .logo { font-family:"Arial Black",sans-serif; font-size:clamp(38px,9vw,84px); letter-spacing:2px; color:#ffb347; text-shadow:0 4px 0 #7a2a1e, 0 10px 28px rgba(0,0,0,.6); }
+  .logo span { color:#ff5252; }
+  .tag { margin-top:6px; letter-spacing:6px; font-size:clamp(11px,2.4vw,17px); color:#ffe9c9; }
+  .press { margin-top:34px; font-size:clamp(14px,3vw,21px); letter-spacing:3px; animation:blink 1.2s steps(2) infinite; color:#fff; background:rgba(0,0,0,.35); padding:10px 18px; border-radius:10px; cursor:pointer; border:1px solid rgba(255,255,255,.25); }
+  @keyframes blink { 50% { opacity:.45; } }
+  .disclaimer { position:absolute; bottom:14px; font-size:11px; opacity:.75; max-width:640px; }
+  h1.screen-title { font-family:"Arial Black",sans-serif; font-size:clamp(24px,5.5vw,44px); letter-spacing:2px; color:#ffb347; text-shadow:0 3px 0 #7a2a1e; margin-bottom:10px; }
+  /* select */
+  #select { background:linear-gradient(180deg, rgba(20,8,4,.88), rgba(20,8,4,.72)); justify-content:flex-start; overflow-y:auto; }
+  .plates { display:flex; gap:12px; width:min(980px,96vw); justify-content:space-between; margin:4px 0 10px; }
+  .plate { flex:1; background:rgba(0,0,0,.45); border:2px solid var(--ac,#888); border-radius:12px; padding:8px 12px; text-align:left; min-height:86px; }
+  .plate .ptag { font-size:11px; letter-spacing:2px; opacity:.8; }
+  .plate .pname { font-family:"Arial Black",sans-serif; font-size:clamp(16px,3.4vw,26px); color:var(--ac,#fff); }
+  .plate .psuper { font-size:12px; color:#ffe9c9; }
+  .plate .pdesc { font-size:11px; opacity:.85; margin-top:2px; }
+  .grid { display:grid; grid-template-columns:repeat(4, minmax(86px,150px)); gap:10px; justify-content:center; }
+  .tile { position:relative; border:3px solid #444; border-radius:14px; background:#241610; color:#fff; padding:10px 6px 8px; cursor:pointer; font-family:inherit; }
+  .tile .face { font-size:40px; line-height:1.1; }
+  .tile .tname { display:block; font-family:"Arial Black",sans-serif; font-size:clamp(10px,2vw,14px); margin-top:4px; color:var(--ac); }
+  .tile .tparty { display:block; font-size:10px; opacity:.75; }
+  .tile.sel1 { border-color:#39c2ff; box-shadow:0 0 0 3px rgba(57,194,255,.35); }
+  .tile.sel2 { border-color:#ff5252; box-shadow:0 0 0 3px rgba(255,82,82,.35); }
+  .tile.locked { filter:grayscale(1) brightness(.6); cursor:not-allowed; }
+  .tile .lock { position:absolute; top:6px; right:8px; font-size:15px; }
+  .tile .bosstag { position:absolute; top:6px; left:8px; font-size:9px; background:#ffd700; color:#000; padding:2px 5px; border-radius:6px; font-weight:bold; }
+  .opts { display:flex; gap:18px; flex-wrap:wrap; justify-content:center; margin-top:12px; }
+  .opt-group { background:rgba(0,0,0,.4); border-radius:10px; padding:7px 10px; }
+  .opt-group span { font-size:11px; letter-spacing:2px; margin-right:6px; opacity:.85; }
+  .opt-group button { background:#3a2417; color:#ffe9c9; border:1px solid #6b4a2f; border-radius:8px; padding:6px 10px; cursor:pointer; font-family:inherit; font-size:12px; }
+  .opt-group button.on { background:#ffb347; color:#231106; font-weight:bold; }
+  .big { margin-top:14px; background:linear-gradient(180deg,#ffcf5e,#ff8a3d); color:#2a1200; border:none; font-family:"Arial Black",sans-serif; font-size:clamp(18px,4vw,26px); padding:12px 44px; border-radius:14px; cursor:pointer; box-shadow:0 6px 0 #a34d12, 0 12px 24px rgba(0,0,0,.5); }
+  .big:active { transform:translateY(3px); box-shadow:0 3px 0 #a34d12; }
+  .controls-help { margin-top:12px; font-size:11.5px; line-height:1.6; opacity:.9; max-width:860px; }
+  #boss-progress { margin-top:8px; font-size:12.5px; color:#ffd700; }
+  /* HUD */
+  #hud { position:fixed; inset:0; z-index:15; pointer-events:none; }
+  #hud .top { display:flex; align-items:flex-start; gap:10px; padding:12px 14px; }
+  .side { flex:1; }
+  .side.right { text-align:right; }
+  .hname { font-family:"Arial Black",sans-serif; font-size:clamp(13px,2.6vw,20px); text-shadow:0 2px 4px #000; }
+  .hp { height:16px; background:rgba(0,0,0,.55); border:2px solid rgba(255,255,255,.65); border-radius:8px; overflow:hidden; margin-top:3px; }
+  .hp-fill { height:100%; width:100%; background:linear-gradient(90deg,#57e86b,#b6ff5e); transition:width .18s; }
+  .side.right .hp-fill { float:right; background:linear-gradient(90deg,#ff9a5e,#ff5252); }
+  .meter { height:9px; background:rgba(0,0,0,.5); border:1px solid rgba(255,255,255,.5); border-radius:6px; overflow:hidden; margin-top:4px; }
+  .meter-fill { height:100%; width:0%; background:linear-gradient(90deg,#ffb347,#ffe95e); transition:width .15s; }
+  .meter-label { font-size:10px; letter-spacing:2px; margin-top:3px; color:#ffe95e; }
+  .wins { font-size:13px; color:#ffd700; letter-spacing:3px; min-height:16px; }
+  #timer { font-family:"Arial Black",sans-serif; font-size:clamp(24px,5vw,40px); background:rgba(0,0,0,.55); border:2px solid rgba(255,255,255,.6); border-radius:12px; padding:2px 14px; }
+  .combo { position:absolute; top:34%; font-family:"Arial Black",sans-serif; font-size:clamp(20px,4.5vw,34px); color:#ffe95e; text-shadow:0 3px 0 #7a2a1e; }
+  .combo.left { left:6%; } .combo.right { right:6%; }
+  #announce { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:18; pointer-events:none; font-family:"Arial Black",sans-serif; font-size:clamp(30px,8vw,72px); color:#ffe95e; text-shadow:0 5px 0 #7a2a1e, 0 14px 34px rgba(0,0,0,.7); letter-spacing:2px; text-align:center; padding:0 10px; }
+  #super-banner { position:fixed; left:0; right:0; top:22%; z-index:17; text-align:center; pointer-events:none; font-family:"Arial Black",sans-serif; font-size:clamp(20px,5.5vw,44px); color:#fff; background:linear-gradient(90deg,transparent,rgba(0,0,0,.65),transparent); padding:10px 4px; }
+  /* pause + result */
+  #pause, #result { background:rgba(12,5,2,.82); z-index:25; }
+  .paper { background:#f7efe0; color:#221605; max-width:620px; width:94vw; border-radius:6px; padding:20px 22px; box-shadow:0 18px 50px rgba(0,0,0,.6); transform:rotate(-1deg); }
+  .paper .masthead { font-family:Georgia,serif; font-weight:bold; font-size:clamp(22px,5vw,36px); border-bottom:3px double #221605; padding-bottom:6px; }
+  .paper .dateline { font-size:11px; margin:5px 0; letter-spacing:1px; }
+  .paper .headline { font-family:Georgia,serif; font-weight:bold; font-size:clamp(19px,4.4vw,30px); line-height:1.25; margin:8px 0; }
+  .paper p { font-family:Georgia,serif; font-size:14px; line-height:1.55; text-align:left; }
+  .paper .stamp { display:inline-block; margin-top:12px; border:3px solid #b3202a; color:#b3202a; font-family:"Arial Black",sans-serif; padding:4px 16px; transform:rotate(-4deg); border-radius:6px; }
+  .row-btns { display:flex; gap:12px; margin-top:16px; flex-wrap:wrap; justify-content:center; }
+  .row-btns button { background:#3a2417; color:#ffe9c9; border:1px solid #6b4a2f; padding:11px 20px; border-radius:10px; cursor:pointer; font-family:"Arial Black",sans-serif; font-size:14px; }
+  .row-btns button.primary { background:linear-gradient(180deg,#ffcf5e,#ff8a3d); color:#2a1200; border:none; }
+  /* legal */
+  #legal { position:fixed; inset:0; z-index:40; background:rgba(0,0,0,.78); display:flex; align-items:center; justify-content:center; padding:14px; }
+  .legal-card { background:#f7efe0; color:#221605; max-width:560px; border-radius:12px; padding:20px 22px; max-height:86vh; overflow-y:auto; }
+  .legal-card h2 { font-family:Georgia,serif; margin-bottom:8px; }
+  .legal-card p, .legal-card li { font-family:Georgia,serif; font-size:13.5px; line-height:1.55; }
+  .legal-card ul { margin:8px 0 8px 18px; }
+  .legal-card button { margin-top:12px; width:100%; }
+  /* touch */
+  #touch { position:fixed; inset:auto 0 0 0; z-index:16; display:none; justify-content:space-between; padding:0 12px 14px; pointer-events:none; }
+  #touch .cluster { display:flex; gap:8px; pointer-events:auto; }
+  #touch button { width:58px; height:58px; border-radius:50%; border:2px solid rgba(255,255,255,.55); background:rgba(0,0,0,.45); color:#fff; font-family:"Arial Black",sans-serif; font-size:11px; }
+  @media (pointer:coarse) { #touch { display:flex; } }
+</style>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }</script>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud" class="hidden">
+  <div class="top">
+    <div class="side left">
+      <div class="hname" id="hname-l"></div>
+      <div class="hp"><div class="hp-fill" id="hp-l"></div></div>
+      <div class="meter"><div class="meter-fill" id="meter-l"></div></div>
+      <div class="meter-label">SHAKTI</div>
+      <div class="wins" id="wins-l"></div>
+    </div>
+    <div id="timer">60</div>
+    <div class="side right">
+      <div class="hname" id="hname-r"></div>
+      <div class="hp"><div class="hp-fill" id="hp-r"></div></div>
+      <div class="meter"><div class="meter-fill" id="meter-r"></div></div>
+      <div class="meter-label">SHAKTI</div>
+      <div class="wins" id="wins-r"></div>
+    </div>
+  </div>
+  <div class="combo left" id="combo-l"></div>
+  <div class="combo right" id="combo-r"></div>
+</div>
+<div id="announce" class="hidden"></div>
+<div id="super-banner" class="hidden"></div>
+
+<div id="title" class="screen">
+  <div class="logo">CHINAR <span>CLASH</span></div>
+  <div class="tag">THE GREAT KASHMIRI KURSI FIGHT</div>
+  <div class="press" id="start-btn">PRESS ENTER / TAP TO START</div>
+  <div class="disclaimer">Political satire and parody. All netas, dialogues and fights are fictional and exaggerated for humour. Not connected to or endorsed by any person or party.</div>
+</div>
+
+<div id="select" class="screen hidden">
+  <h1 class="screen-title">SELECT YOUR NETA</h1>
+  <div class="plates">
+    <div class="plate" id="plate-p1"><div class="ptag">1P · YOU</div><div class="pname"></div><div class="psuper"></div><div class="pdesc"></div></div>
+    <div class="plate" id="plate-p2"><div class="ptag">CPU</div><div class="pname"></div><div class="psuper"></div><div class="pdesc"></div></div>
+  </div>
+  <div class="grid" id="grid"></div>
+  <div class="opts">
+    <div class="opt-group" id="stage-pick"><span>STAGE</span></div>
+    <div class="opt-group" id="diff-pick"><span>CPU</span></div>
+  </div>
+  <button class="big" id="fight-btn">FIGHT!</button>
+  <div id="boss-progress"></div>
+  <div class="controls-help">
+    <b>Pick:</b> click a face (1st click = you, 2nd = CPU) · <b>Move</b> A/D · <b>Jump</b> W · <b>Crouch</b> S · <b>Block</b> hold away · <b>Punch</b> J · <b>Kick</b> K · <b>Grab</b> I · <b>Super</b> L (full SHAKTI) · <b>Special:</b> forward+J/K · <b>Sweep:</b> S+K · <b>Pause</b> Esc
+  </div>
+</div>
+
+<div id="pause" class="screen hidden">
+  <h1 class="screen-title">CHAI BREAK ☕</h1>
+  <p>Assembly adjourned till further notice.</p>
+  <div class="row-btns">
+    <button class="primary" id="resume-btn">RESUME</button>
+    <button id="quit-btn">QUIT TO SELECT</button>
+  </div>
+</div>
+
+<div id="result" class="screen hidden">
+  <div class="paper">
+    <div class="masthead">THE DAILY CHINAR</div>
+    <div class="dateline" id="paper-date"></div>
+    <div class="headline" id="paper-headline"></div>
+    <p id="paper-body"></p>
+    <div class="stamp" id="paper-stamp">YOU WIN!</div>
+  </div>
+  <p id="result-sub" style="margin-top:12px;"></p>
+  <div class="row-btns">
+    <button class="primary" id="rematch-btn">REMATCH</button>
+    <button id="select-btn">CHARACTER SELECT</button>
+  </div>
+</div>
+
+<div id="touch">
+  <div class="cluster">
+    <button data-t="left">◀</button><button data-t="right">▶</button><button data-t="jump">JUMP</button>
+  </div>
+  <div class="cluster">
+    <button data-t="super">SUPER</button><button data-t="punch">PUNCH</button><button data-t="kick">KICK</button>
+  </div>
+</div>
+
+<div id="legal" class="hidden">
+  <div class="legal-card">
+    <h2>SATIRE NOTICE · व्यंग्य सूचना</h2>
+    <p>CHINAR CLASH is a political satire and parody game made for entertainment, humour and social commentary.</p>
+    <ul>
+      <li>All characters, dialogues and headlines are fictional, exaggerated caricatures — not factual claims about any real person.</li>
+      <li>It is not affiliated with, endorsed by or connected to any political leader, party or government body.</li>
+      <li>It does not intend to promote hatred, discrimination, or to influence any election.</li>
+      <li>The fighting is cartoon-style. Please do not imitate it in real life.</li>
+    </ul>
+    <p>By continuing, you understand this is a work of satire.</p>
+    <button class="big" id="legal-ok" style="font-size:18px; padding:10px;">SAMAJH GAYA — PLAY</button>
+  </div>
+</div>
+
+<script type="module" src="./game.js"></script>
+</body>
+</html>
