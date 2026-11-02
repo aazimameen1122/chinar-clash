@@ -257,6 +257,23 @@ document.querySelectorAll('#touch button').forEach(b => {
   b.addEventListener('pointerup', () => touchState[k] = false);
   b.addEventListener('pointerleave', () => touchState[k] = false);
 });
+/* virtual joystick (like the original's stick): drag = move, push up = jump, pull down = crouch */
+const stickEl = document.getElementById('stick'), knobEl = document.getElementById('knob');
+let stickId = null;
+function stickMove(e){
+  const r = stickEl.getBoundingClientRect(), cx = r.left + r.width/2, cy = r.top + r.height/2;
+  let dx = (e.clientX - cx) / (r.width/2), dy = (e.clientY - cy) / (r.height/2);
+  const m = Math.hypot(dx, dy); if(m > 1){ dx /= m; dy /= m; }
+  knobEl.style.transform = `translate(${dx*34}px, ${dy*34}px)`;
+  touchState.left = dx < -0.35; touchState.right = dx > 0.35; touchState.crouch = dy > 0.6;
+  if(dy < -0.62 && !touchState._jumped){ touchState.jump = true; touchState._jumped = true; }
+  if(dy > -0.3) touchState._jumped = false;
+}
+function stickEnd(){ stickId = null; knobEl.style.transform = ''; touchState.left = touchState.right = touchState.crouch = false; }
+stickEl.addEventListener('pointerdown', e => { e.preventDefault(); stickId = e.pointerId; try { stickEl.setPointerCapture(e.pointerId); } catch(err){} stickMove(e); });
+stickEl.addEventListener('pointermove', e => { if(e.pointerId === stickId) stickMove(e); });
+stickEl.addEventListener('pointerup', stickEnd);
+stickEl.addEventListener('pointercancel', stickEnd);
 
 function newFighter(def, x, facing, isP1){
   return { def, model:makeModel(def), x, y:0, vx:0, vy:0, facing, isP1,
@@ -381,7 +398,7 @@ function playerControl(F, foe, dt){
   const L = keys['KeyA'] || keys['ArrowLeft'] || touchState.left;
   const R = keys['KeyD'] || keys['ArrowRight'] || touchState.right;
   const fwd = F.facing > 0 ? R : L, back = F.facing > 0 ? L : R;
-  F.crouch = !!(keys['KeyS'] || keys['ArrowDown']) && F.grounded;
+  F.crouch = !!((keys['KeyS'] || keys['ArrowDown']) || touchState.crouch) && F.grounded;
   F.blocking = !!back && F.grounded && !F.atk;
   if(!F.atk && match.state === 'fight'){
     if(L && !F.crouch) F.vx = -F.def.walk; else if(R && !F.crouch) F.vx = F.def.walk; else F.vx = 0;
@@ -390,6 +407,7 @@ function playerControl(F, foe, dt){
   if(touchState.punch){ tryAttack(F, F.crouch ? 'punch' : (fwd ? 'special1' : 'punch')); touchState.punch = false; }
   if(touchState.kick){ tryAttack(F, F.crouch ? 'sweep' : (fwd ? 'special2' : 'kick')); touchState.kick = false; }
   if(touchState.super){ doSuper(F, foe); touchState.super = false; }
+  if(touchState.grab){ tryAttack(F, 'grab'); touchState.grab = false; }
 }
 function onKey(e){
   if(screen === 'title' && (e.code === 'Enter' || e.code === 'Space')) return openSelect();

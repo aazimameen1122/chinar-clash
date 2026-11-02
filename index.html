@@ -92,10 +92,14 @@
   .legal-card ul { margin:8px 0 8px 18px; }
   .legal-card button { margin-top:12px; width:100%; }
   /* touch */
-  #touch { position:fixed; inset:auto 0 0 0; z-index:16; display:none; justify-content:space-between; padding:0 12px 14px; pointer-events:none; }
+  #touch { position:fixed; inset:auto 0 0 0; z-index:16; display:none; justify-content:space-between; align-items:flex-end; padding:0 12px 14px; pointer-events:none; }
   #touch .cluster { display:flex; gap:8px; pointer-events:auto; }
+  #stick { position:relative; width:126px; height:126px; pointer-events:auto; touch-action:none; }
+  #stick .ring { position:absolute; inset:0; border-radius:50%; border:2px solid rgba(255,255,255,.45); background:rgba(0,0,0,.32); }
+  #stick .ring::after { content:'MOVE'; position:absolute; inset:auto 0 8px 0; text-align:center; font-size:9px; letter-spacing:2px; color:rgba(255,255,255,.65); }
+  #knob { position:absolute; left:50%; top:50%; width:56px; height:56px; margin:-28px 0 0 -28px; border-radius:50%; background:rgba(255,255,255,.35); border:2px solid rgba(255,255,255,.65); }
   #touch button { width:58px; height:58px; border-radius:50%; border:2px solid rgba(255,255,255,.55); background:rgba(0,0,0,.45); color:#fff; font-family:"Arial Black",sans-serif; font-size:11px; }
-  @media (pointer:coarse) { #touch { display:flex; } }
+  @media (pointer:coarse) { #touch { display:flex; } #newsdesk { bottom:152px; width:min(540px,60vw); } }
 </style>
 <script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }</script>
 </head>
@@ -181,11 +185,9 @@
 </div>
 
 <div id="touch">
+  <div id="stick" aria-label="Move joystick"><div class="ring"></div><div id="knob"></div></div>
   <div class="cluster">
-    <button data-t="left">◀</button><button data-t="right">▶</button><button data-t="jump">JUMP</button>
-  </div>
-  <div class="cluster">
-    <button data-t="super">SUPER</button><button data-t="punch">PUNCH</button><button data-t="kick">KICK</button>
+    <button data-t="grab">GRAB</button><button data-t="super">SUPER</button><button data-t="punch">PUNCH</button><button data-t="kick">KICK</button>
   </div>
 </div>
 
