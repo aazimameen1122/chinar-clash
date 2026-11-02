@@ -257,23 +257,32 @@ document.querySelectorAll('#touch button').forEach(b => {
   b.addEventListener('pointerup', () => touchState[k] = false);
   b.addEventListener('pointerleave', () => touchState[k] = false);
 });
-/* virtual joystick (like the original's stick): drag = move, push up = jump, pull down = crouch */
+/* virtual joystick v2 (like the original's stick): drag = move, push up = jump, pull down = crouch.
+   Handles BOTH pointer events and raw touch events, so it works in phone browsers and in-app webviews. */
 const stickEl = document.getElementById('stick'), knobEl = document.getElementById('knob');
 let stickId = null;
+function stickPoint(e){ if(e.touches && e.touches[0]) return e.touches[0]; if(e.changedTouches && e.changedTouches[0]) return e.changedTouches[0]; return e; }
 function stickMove(e){
-  const r = stickEl.getBoundingClientRect(), cx = r.left + r.width/2, cy = r.top + r.height/2;
-  let dx = (e.clientX - cx) / (r.width/2), dy = (e.clientY - cy) / (r.height/2);
+  if(!stickEl || !knobEl) return;
+  const p = stickPoint(e), r = stickEl.getBoundingClientRect(), cx = r.left + r.width/2, cy = r.top + r.height/2;
+  let dx = (p.clientX - cx) / (r.width/2), dy = (p.clientY - cy) / (r.height/2);
   const m = Math.hypot(dx, dy); if(m > 1){ dx /= m; dy /= m; }
-  knobEl.style.transform = `translate(${dx*34}px, ${dy*34}px)`;
-  touchState.left = dx < -0.35; touchState.right = dx > 0.35; touchState.crouch = dy > 0.6;
-  if(dy < -0.62 && !touchState._jumped){ touchState.jump = true; touchState._jumped = true; }
-  if(dy > -0.3) touchState._jumped = false;
+  knobEl.style.transform = `translate(${dx*38}px, ${dy*38}px)`;
+  touchState.left = dx < -0.3; touchState.right = dx > 0.3; touchState.crouch = dy > 0.55;
+  if(dy < -0.58 && !touchState._jumped){ touchState.jump = true; touchState._jumped = true; }
+  if(dy > -0.25) touchState._jumped = false;
 }
-function stickEnd(){ stickId = null; knobEl.style.transform = ''; touchState.left = touchState.right = touchState.crouch = false; }
-stickEl.addEventListener('pointerdown', e => { e.preventDefault(); stickId = e.pointerId; try { stickEl.setPointerCapture(e.pointerId); } catch(err){} stickMove(e); });
-stickEl.addEventListener('pointermove', e => { if(e.pointerId === stickId) stickMove(e); });
-stickEl.addEventListener('pointerup', stickEnd);
-stickEl.addEventListener('pointercancel', stickEnd);
+function stickEnd(){ stickId = null; if(knobEl) knobEl.style.transform = ''; touchState.left = touchState.right = touchState.crouch = false; }
+if(stickEl){
+  stickEl.addEventListener('pointerdown', e => { e.preventDefault(); stickId = e.pointerId; try { stickEl.setPointerCapture(e.pointerId); } catch(err){} stickMove(e); });
+  stickEl.addEventListener('pointermove', e => { if(e.pointerId === stickId) stickMove(e); });
+  stickEl.addEventListener('pointerup', stickEnd);
+  stickEl.addEventListener('pointercancel', stickEnd);
+  stickEl.addEventListener('touchstart', e => { e.preventDefault(); stickMove(e); }, { passive:false });
+  stickEl.addEventListener('touchmove', e => { e.preventDefault(); stickMove(e); }, { passive:false });
+  stickEl.addEventListener('touchend', e => { e.preventDefault(); stickEnd(); }, { passive:false });
+  stickEl.addEventListener('touchcancel', stickEnd);
+}
 
 function newFighter(def, x, facing, isP1){
   return { def, model:makeModel(def), x, y:0, vx:0, vy:0, facing, isP1,
